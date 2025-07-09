@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/execute_add_op.dir/main.cpp.o -o execute_add_op   -L/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/devlib  -L/usr/local/Ascend/ascend-toolkit/latest/opp/vendors/customize/op_api/lib  -lascendcl -lcust_opapi -lacl_op_compiler -lnnopbase -lstdc++ 

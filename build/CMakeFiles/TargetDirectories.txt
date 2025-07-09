@@ -1,0 +1,7 @@
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/execute_add_op.dir
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/edit_cache.dir
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/rebuild_cache.dir
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/list_install_components.dir
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/install.dir
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/install/local.dir
+/workspace/STomzz/atlas_op_max/build/CMakeFiles/install/strip.dir
