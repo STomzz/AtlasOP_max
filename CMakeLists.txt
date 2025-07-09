@@ -1,74 +1,60 @@
-cmake_minimum_required(VERSION 3.16.0)
-project(opp)
+# Copyright (c) Huawei Technologies Co., Ltd. 2024. All rights reserved.
 
-include(cmake/config.cmake)
-include(cmake/func.cmake)
-include(cmake/intf.cmake)
+# CMake lowest version requirement
+cmake_minimum_required(VERSION 3.5.1)
 
-if(ENABLE_CROSS_COMPILE)
-    if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL x86_64)
-        set(CROSS_COMPILE_PLATFORM aarch64)
-    else()
-        set(CROSS_COMPILE_PLATFORM x86_64)
-    endif()
-    set(PLATFORM ${CMAKE_SYSTEM_PROCESSOR})
-    set(CMAKE_COMPILE_COMPILER_LIBRARY ${ASCEND_CANN_PACKAGE_PATH}/${PLATFORM}-linux/devlib/linux/${CROSS_COMPILE_PLATFORM}/)
-    set(CMAKE_COMPILE_RUNTIME_LIBRARY ${ASCEND_CANN_PACKAGE_PATH}/${PLATFORM}-linux/devlib/${CROSS_COMPILE_PLATFORM}/)
-    if(CMAKE_CROSS_LIBRARY_PATH)
-        set(CMAKE_COMPILE_COMPILER_LIBRARY ${CMAKE_CROSS_LIBRARY_PATH})
-        set(CMAKE_COMPILE_RUNTIME_LIBRARY ${CMAKE_CROSS_LIBRARY_PATH})
-    endif()
-    set(CMAKE_SYSTEM_PROCESSOR ${CROSS_COMPILE_PLATFORM})
-    set(CMAKE_COMPILE ${CMAKE_CXX_COMPILER})
-    set(CMAKE_CXX_COMPILER ${CMAKE_CROSS_PLATFORM_COMPILER})
+# project information
+project(acl_execute_add)
+
+# Compile options
+add_compile_options(-std=c++11)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "./")
+
+set(INC_PATH $ENV{DDK_PATH})
+
+if(NOT DEFINED ENV{DDK_PATH})
+    set(INC_PATH "/usr/local/Ascend/ascend-toolkit/latest")
+    message(STATUS "set default INC_PATH: ${INC_PATH}")
 else()
-    set(CMAKE_COMPILE ${CMAKE_CXX_COMPILER})
+    message(STATUS "env INC_PATH: ${INC_PATH}")
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/framework)
-    add_subdirectory(framework)
-endif()
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/op_host)
-    add_subdirectory(op_host)
-endif()
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/op_kernel)
-    add_subdirectory(op_kernel)
-endif()
-if(ENABLE_TEST AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/testcases)
-    add_subdirectory(testcases)
+set(CUST_PKG_PATH "${INC_PATH}/opp/vendors/customize/op_api")
+
+set(LIB_PATH $ENV{NPU_HOST_LIB})
+
+# Dynamic libraries in the stub directory can only be used for compilation
+if(NOT DEFINED ENV{NPU_HOST_LIB})
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" SYSTEM_NAME_LOWER)
+    set(LIB_PATH "/usr/local/Ascend/ascend-toolkit/latest/${CMAKE_SYSTEM_PROCESSOR}-${SYSTEM_NAME_LOWER}/devlib")
+    message(STATUS "set default LIB_PATH: ${LIB_PATH}")
+else()
+    message(STATUS "env LIB_PATH: ${LIB_PATH}")
 endif()
 
-# modify vendor_name in install.sh and upgrade.sh
-add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/scripts/install.sh ${CMAKE_BINARY_DIR}/scripts/upgrade.sh
-    COMMAND mkdir -p ${CMAKE_BINARY_DIR}/scripts
-    COMMAND cp -r ${CMAKE_SOURCE_DIR}/scripts/* ${CMAKE_BINARY_DIR}/scripts/
-    COMMAND sed -i "s/vendor_name=customize/vendor_name=${vendor_name}/g" ${CMAKE_BINARY_DIR}/scripts/*
-)
-add_custom_target(modify_vendor ALL DEPENDS ${CMAKE_BINARY_DIR}/scripts/install.sh ${CMAKE_BINARY_DIR}/scripts/upgrade.sh)
-install(DIRECTORY ${CMAKE_BINARY_DIR}/scripts/ DESTINATION . FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ GROUP_READ)
-
-install(FILES ${CMAKE_SOURCE_DIR}/custom.proto DESTINATION packages OPTIONAL)
-
-get_system_info(SYSTEM_INFO)
-
-# gen version.info
-add_custom_target(gen_version_info ALL
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/util/gen_version_info.sh ${ASCEND_CANN_PACKAGE_PATH} ${CMAKE_CURRENT_BINARY_DIR}
+# Header path
+include_directories(
+    ${INC_PATH}/include
+    ${CUST_PKG_PATH}/include
 )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/version.info
-        DESTINATION packages/vendors/${vendor_name}/)
+# add host lib path
+link_directories(
+    ${LIB_PATH}
+    ${CUST_PKG_PATH}/lib
+)
 
-# CPack config
-set(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-set(CPACK_PACKAGE_VERSION ${CMAKE_PROJECT_VERSION})
-set(CPACK_PACKAGE_DESCRIPTION "CPack opp project")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CPack opp project")
-set(CPACK_PACKAGE_DIRECTORY ${CMAKE_INSTALL_PREFIX})
-set(CPACK_PACKAGE_FILE_NAME "custom_opp_${SYSTEM_INFO}.run")
-set(CPACK_GENERATOR External)
-set(CPACK_CMAKE_GENERATOR "Unix Makefiles")
-set(CPACK_EXTERNAL_ENABLE_STAGING TRUE)
-set(CPACK_EXTERNAL_PACKAGE_SCRIPT ${CMAKE_SOURCE_DIR}/cmake/makeself.cmake)
-set(CPACK_EXTERNAL_BUILT_PACKAGES ${CPACK_PACKAGE_DIRECTORY}/_CPack_Packages/Linux/External/${CPACK_PACKAGE_FILE_NAME}/${CPACK_PACKAGE_FILE_NAME})
-include(CPack)
+add_executable(execute_add_op
+    main.cpp
+)
+
+target_link_libraries(execute_add_op
+    ascendcl
+    cust_opapi
+    acl_op_compiler
+    nnopbase
+    stdc++
+)
+
+install(TARGETS execute_add_op DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
